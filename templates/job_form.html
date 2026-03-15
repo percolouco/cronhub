@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{% if job %}Modifier{% else %}Nouveau job{% endif %} — CronHub{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <a href="/" class="text-slate-400 hover:text-slate-600 text-sm flex items-center gap-1 mb-4 transition">
+        <i class="fas fa-arrow-left text-xs"></i> Retour
+    </a>
+    <h2 class="text-2xl font-bold text-slate-800">
+        {% if job %}Modifier le job{% else %}Nouveau cron job{% endif %}
+    </h2>
+</div>
+
+<div class="max-w-2xl">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-8">
+        {% if error %}
+        <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+            <i class="fas fa-circle-exclamation"></i> {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ action }}" class="space-y-6">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                    Nom <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="name" required
+                    value="{{ form.name if form else (job.name if job else '') }}"
+                    placeholder="Ex: Backup quotidien"
+                    class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 text-slate-700 placeholder-slate-300">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                    Schedule (cron) <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="schedule" required
+                    value="{{ form.schedule if form else (job.schedule if job else '0 3 * * *') }}"
+                    placeholder="0 3 * * *"
+                    class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 font-mono text-slate-700 placeholder-slate-300">
+                <div class="mt-2 flex flex-wrap gap-2">
+                    <button type="button" onclick="setCron('0 3 * * *')" class="text-xs bg-slate-100 hover:bg-orange-100 hover:text-orange-600 text-slate-500 px-2 py-1 rounded transition">Chaque jour 3h</button>
+                    <button type="button" onclick="setCron('0 * * * *')" class="text-xs bg-slate-100 hover:bg-orange-100 hover:text-orange-600 text-slate-500 px-2 py-1 rounded transition">Chaque heure</button>
+                    <button type="button" onclick="setCron('*/5 * * * *')" class="text-xs bg-slate-100 hover:bg-orange-100 hover:text-orange-600 text-slate-500 px-2 py-1 rounded transition">Toutes les 5min</button>
+                    <button type="button" onclick="setCron('0 0 * * 0')" class="text-xs bg-slate-100 hover:bg-orange-100 hover:text-orange-600 text-slate-500 px-2 py-1 rounded transition">Chaque dimanche</button>
+                    <button type="button" onclick="setCron('0 0 1 * *')" class="text-xs bg-slate-100 hover:bg-orange-100 hover:text-orange-600 text-slate-500 px-2 py-1 rounded transition">1er du mois</button>
+                </div>
+                <p class="text-xs text-slate-400 mt-1">Format : minute heure jour mois jour_semaine</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                    Commande <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="command" required
+                    value="{{ form.command if form else (job.command if job else '') }}"
+                    placeholder="/app/scripts/mon-script.sh ou docker exec mon-container ..."
+                    class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 font-mono text-sm text-slate-700 placeholder-slate-300">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                    Description
+                </label>
+                <textarea name="description" rows="3"
+                    placeholder="Description optionnelle..."
+                    class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 text-slate-700 placeholder-slate-300 resize-none">{{ job.description if job else '' }}</textarea>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <input type="checkbox" name="enabled" id="enabled" value="on"
+                    {% if not job or job.enabled %}checked{% endif %}
+                    class="w-4 h-4 accent-orange-500">
+                <label for="enabled" class="text-sm font-semibold text-slate-700">Activer immédiatement</label>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button type="submit"
+                    class="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2">
+                    <i class="fas {% if job %}fa-save{% else %}fa-plus{% endif %}"></i>
+                    {% if job %}Enregistrer{% else %}Créer le job{% endif %}
+                </button>
+                <a href="/"
+                    class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg font-semibold transition flex items-center gap-2">
+                    Annuler
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Aide cron -->
+    <div class="mt-6 bg-slate-800 rounded-xl p-6 text-slate-300 text-sm">
+        <h4 class="text-white font-semibold mb-3 flex items-center gap-2">
+            <i class="fas fa-lightbulb text-orange-400"></i> Aide — Format cron
+        </h4>
+        <pre class="font-mono text-xs text-slate-400">
+┌───────────── minute       (0-59)
+│ ┌─────────── heure        (0-23)
+│ │ ┌───────── jour         (1-31)
+│ │ │ ┌─────── mois         (1-12)
+│ │ │ │ ┌───── jour semaine (0-7, 0=dim)
+│ │ │ │ │
+* * * * *
+        </pre>
+        <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <div><code class="text-orange-400">*</code> — toutes les valeurs</div>
+            <div><code class="text-orange-400">*/5</code> — toutes les 5 unités</div>
+            <div><code class="text-orange-400">1,3,5</code> — valeurs spécifiques</div>
+            <div><code class="text-orange-400">1-5</code> — plage</div>
+        </div>
+    </div>
+</div>
+
+<script>
+function setCron(val) {
+    document.querySelector('input[name="schedule"]').value = val;
+}
+</script>
+{% endblock %}

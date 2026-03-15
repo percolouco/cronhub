@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}{{ job.name }} — CronHub{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="/" class="text-slate-400 hover:text-slate-600 text-sm flex items-center gap-1 mb-4 transition">
+        <i class="fas fa-arrow-left text-xs"></i> Retour au dashboard
+    </a>
+    <div class="flex items-start justify-between">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800">{{ job.name }}</h2>
+            {% if job.description %}
+            <p class="text-slate-500 text-sm mt-1">{{ job.description }}</p>
+            {% endif %}
+        </div>
+        <div class="flex items-center gap-2">
+            <!-- Toggle -->
+            <form method="POST" action="/jobs/{{ job.id }}/toggle">
+                <button type="submit"
+                    class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition
+                        {% if job.enabled %}bg-green-100 text-green-700 hover:bg-green-200{% else %}bg-slate-100 text-slate-500 hover:bg-slate-200{% endif %}">
+                    <i class="fas {% if job.enabled %}fa-toggle-on{% else %}fa-toggle-off{% endif %}"></i>
+                    {% if job.enabled %}Actif{% else %}Inactif{% endif %}
+                </button>
+            </form>
+            <!-- Run now -->
+            <form method="POST" action="/jobs/{{ job.id }}/run-now">
+                <button type="submit"
+                    class="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium text-sm transition">
+                    <i class="fas fa-play"></i> Exécuter
+                </button>
+            </form>
+            <!-- Edit -->
+            <a href="/jobs/{{ job.id }}/edit"
+                class="flex items-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-medium text-sm transition">
+                <i class="fas fa-pen"></i> Modifier
+            </a>
+            <!-- Delete -->
+            <form id="del-form" method="POST" action="/jobs/{{ job.id }}/delete">
+                <button type="button" onclick="confirmDelete('del-form')"
+                    class="flex items-center gap-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium text-sm transition">
+                    <i class="fas fa-trash"></i> Supprimer
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Job details -->
+<div class="grid grid-cols-3 gap-4 mb-8">
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Schedule</p>
+        <code class="text-lg font-bold text-slate-800 font-mono">{{ job.schedule }}</code>
+    </div>
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Dernière exécution</p>
+        <p class="text-slate-800 font-semibold">
+            {% if job.last_run %}
+                {{ job.last_run | replace("T", " ") | truncate(19, True, '') }}
+            {% else %}
+                <span class="text-slate-300">Jamais</span>
+            {% endif %}
+        </p>
+    </div>
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Dernier statut</p>
+        {% if job.last_status == 'success' %}
+            <span class="inline-flex items-center gap-1.5 text-green-700 font-semibold">
+                <i class="fas fa-circle-check"></i> Succès
+            </span>
+        {% elif job.last_status == 'failed' %}
+            <span class="inline-flex items-center gap-1.5 text-red-700 font-semibold">
+                <i class="fas fa-circle-xmark"></i> Échec
+            </span>
+        {% elif job.last_status == 'running' %}
+            <span class="inline-flex items-center gap-1.5 text-blue-700 font-semibold">
+                <span class="pulse-dot w-2 h-2 bg-blue-500 rounded-full inline-block"></span> En cours
+            </span>
+        {% else %}
+            <span class="text-slate-400">—</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Command -->
+<div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 mb-6">
+    <h3 class="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+        <i class="fas fa-terminal text-orange-400"></i> Commande
+    </h3>
+    <code class="block bg-slate-900 text-green-400 p-4 rounded-lg text-sm font-mono break-all">{{ job.command }}</code>
+</div>
+
+<!-- Logs -->
+<div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100">
+        <h3 class="font-semibold text-slate-700 flex items-center gap-2">
+            <i class="fas fa-scroll text-orange-400"></i> Historique d'exécution
+            <span class="text-xs text-slate-400 font-normal">(20 dernières)</span>
+        </h3>
+    </div>
+
+    {% if logs %}
+    <div class="divide-y divide-slate-100">
+        {% for log in logs %}
+        <details class="group">
+            <summary class="px-6 py-4 flex items-center gap-4 cursor-pointer hover:bg-slate-50 transition list-none">
+                <div class="flex items-center gap-2 w-24">
+                    {% if log.status == 'success' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                            <i class="fas fa-check"></i> OK
+                        </span>
+                    {% elif log.status == 'failed' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                            <i class="fas fa-xmark"></i> Erreur
+                        </span>
+                    {% elif log.status == 'running' %}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                            <span class="pulse-dot w-1.5 h-1.5 bg-blue-500 rounded-full"></span> En cours
+                        </span>
+                    {% endif %}
+                </div>
+                <div class="flex-1 text-sm">
+                    <span class="text-slate-700 font-medium">{{ log.started_at | replace("T", " ") | truncate(19, True, '') }}</span>
+                    {% if log.ended_at %}
+                    <span class="text-slate-400 ml-2 text-xs">
+                        → {% set dur = log.ended_at | replace("T", " ") %}{{ log.ended_at | replace("T", " ") | truncate(19, True, '') }}
+                    </span>
+                    {% endif %}
+                </div>
+                {% if log.exit_code is not none %}
+                <code class="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-500">exit: {{ log.exit_code }}</code>
+                {% endif %}
+                <i class="fas fa-chevron-down text-slate-400 text-xs group-open:rotate-180 transition-transform"></i>
+            </summary>
+            <div class="px-6 pb-4 bg-slate-50">
+                {% if log.stdout %}
+                <div class="mb-3">
+                    <p class="text-xs font-semibold text-slate-500 mb-1">STDOUT</p>
+                    <pre class="bg-slate-900 text-green-300 p-3 rounded text-xs font-mono overflow-x-auto max-h-48 overflow-y-auto">{{ log.stdout }}</pre>
+                </div>
+                {% endif %}
+                {% if log.stderr %}
+                <div>
+                    <p class="text-xs font-semibold text-slate-500 mb-1">STDERR</p>
+                    <pre class="bg-slate-900 text-red-300 p-3 rounded text-xs font-mono overflow-x-auto max-h-48 overflow-y-auto">{{ log.stderr }}</pre>
+                </div>
+                {% endif %}
+                {% if not log.stdout and not log.stderr %}
+                <p class="text-xs text-slate-400 italic">Pas de sortie</p>
+                {% endif %}
+            </div>
+        </details>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="py-12 text-center">
+        <i class="fas fa-scroll text-3xl text-slate-200 mb-3"></i>
+        <p class="text-slate-400 text-sm">Aucune exécution pour ce job</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

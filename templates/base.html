@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CronHub{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        .status-badge { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold; }
+        .pulse-dot { animation: pulse 2s cubic-bezier(0.4,0,0.6,1) infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+
+    <!-- Sidebar -->
+    <div class="w-64 bg-slate-800 min-h-screen flex flex-col fixed left-0 top-0 z-10">
+        <div class="p-6 border-b border-slate-700">
+            <h1 class="text-white text-xl font-bold flex items-center gap-2">
+                <i class="fas fa-clock text-orange-400"></i> CronHub
+            </h1>
+            <p class="text-slate-400 text-xs mt-1">Gestionnaire de crons</p>
+        </div>
+        <nav class="flex-1 p-4 space-y-1">
+            <a href="/" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition
+                {% if page == 'dashboard' %}bg-orange-500 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %}">
+                <i class="fas fa-gauge-high w-5"></i> Dashboard
+            </a>
+            <a href="/jobs/new" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition
+                {% if page == 'new_job' %}bg-orange-500 text-white{% else %}text-slate-300 hover:bg-slate-700 hover:text-white{% endif %}">
+                <i class="fas fa-plus-circle w-5"></i> Nouveau job
+            </a>
+            <a href="/docs" target="_blank" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition text-slate-300 hover:bg-slate-700 hover:text-white">
+                <i class="fas fa-book w-5"></i> API Docs
+            </a>
+        </nav>
+        <div class="p-4 border-t border-slate-700 text-xs text-slate-500 text-center">CronHub v1.0</div>
+    </div>
+
+    <!-- Main content -->
+    <div class="ml-64 flex-1 p-8">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script>
+    // Auto-refresh toutes les 30s sur le dashboard
+    if (window.location.pathname === '/') {
+        setTimeout(() => location.reload(), 30000);
+    }
+
+    function confirmDelete(formId) {
+        if (confirm('Supprimer ce job ? Cette action est irréversible.')) {
+            document.getElementById(formId).submit();
+        }
+    }
+    </script>
+</body>
+</html>

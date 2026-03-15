@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  cronhub:
+    build: .
+    container_name: cronhub
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+      - /opt/container/cronmaster/scripts:/scripts:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DB_PATH=/data/cronhub.db
+      - TZ=Europe/Paris
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cronhub.rule=Host(`cronhub.nas.percolouco.com`)"
+      - "traefik.http.routers.cronhub.entrypoints=websecure"
+      - "traefik.http.routers.cronhub.tls=true"
+      - "traefik.http.routers.cronhub.tls.certresolver=letsencrypt"
+      - "traefik.http.services.cronhub.loadbalancer.server.port=8000"
+
+networks:
+  proxy:
+    external: true
