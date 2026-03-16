@@ -8,7 +8,9 @@
 
 ## 📋 Description
 
-CronHub permet de créer, gérer et monitorer des tâches planifiées (cron jobs) depuis une interface web simple et intuitive. Chaque job est exécuté via `subprocess` dans le conteneur Docker, avec capture des logs (stdout/stderr) et historique d'exécution.
+CronHub permet de créer, gérer et monitorer des tâches planifiées (cron jobs) depuis une interface web simple et intuitive. Chaque job est exécuté via `nsenter` dans le namespace de l'hôte Docker, avec capture des logs (stdout/stderr) et historique d'exécution.
+
+> **Nouveauté** : les commandes sont désormais exécutées via `nsenter --target 1 --mount --uts --ipc --net --pid`, ce qui donne accès complet à l'environnement hôte (python3, npm, openclaw, etc.).
 
 ---
 
@@ -29,6 +31,7 @@ CronHub permet de créer, gérer et monitorer des tâches planifiées (cron jobs
 ## ✨ Fonctionnalités
 
 - **CRUD complet** — Créer, lire, modifier, supprimer des jobs
+- **Catégories** — Champ `category` sur chaque job ; filtre par catégorie dans l'UI + colonne dédiée dans le tableau
 - **Toggle actif/inactif** — Activer ou désactiver un job sans le supprimer
 - **Run immédiat** — Déclencher un job manuellement hors schedule
 - **Logs d'exécution** — Historique complet avec stdout, stderr, exit code, durée
@@ -36,6 +39,16 @@ CronHub permet de créer, gérer et monitorer des tâches planifiées (cron jobs
 - **API Swagger** — Documentation interactive disponible sur `/docs`
 - **Timezone** — Europe/Paris (configurable via `TZ`)
 - **Persistance** — SQLite dans volume Docker `/data`
+- **Accès hôte** — Exécution via `nsenter` pour accéder à python3, npm, openclaw et tous les outils de l'hôte
+
+---
+
+## 📊 Jobs configurés (35 au total)
+
+| Catégorie | Nombre | Exemples |
+|-----------|--------|---------|
+| Système / MH / Plex / Location | 11 | Backups, monitoring, rapports Plex |
+| Potager / Maison | 24 | Arrosage, alertes, automatisations maison |
 
 ---
 
@@ -71,7 +84,7 @@ CronHub permet de créer, gérer et monitorer des tâches planifiées (cron jobs
 ### Exemple d'appel API
 
 ```bash
-# Créer un job
+# Créer un job avec catégorie
 curl -X POST https://cronhub.nas.percolouco.com/api/jobs \
   -H "Content-Type: application/json" \
   -d '{
@@ -79,11 +92,17 @@ curl -X POST https://cronhub.nas.percolouco.com/api/jobs \
     "schedule": "0 3 * * *",
     "command": "/scripts/backup.sh",
     "description": "Backup quotidien à 3h",
+    "category": "système",
     "enabled": true
   }'
 
 # Lister les jobs
 curl https://cronhub.nas.percolouco.com/api/jobs
+
+# Mettre à jour la catégorie d'un job
+curl -X PUT https://cronhub.nas.percolouco.com/api/jobs/{id} \
+  -H "Content-Type: application/json" \
+  -d '{"category": "potager"}'
 
 # Déclencher manuellement
 curl -X POST https://cronhub.nas.percolouco.com/api/jobs/{id}/run
@@ -102,9 +121,9 @@ cronhub/
 │   ├── __init__.py
 │   └── main.py          # Application FastAPI (routes, scheduler, DB)
 ├── templates/
-│   ├── index.html       # Dashboard
+│   ├── index.html       # Dashboard (avec filtre par catégorie)
 │   ├── job_detail.html  # Détail d'un job + logs
-│   └── job_form.html    # Formulaire création/édition
+│   └── job_form.html    # Formulaire création/édition (champ category)
 ├── data/                # Volume persistant (SQLite)
 ├── Dockerfile
 ├── docker-compose.yml
@@ -130,10 +149,12 @@ services:
     build: .
     container_name: cronhub
     restart: unless-stopped
+    privileged: true        # Requis pour nsenter
+    pid: host               # Accès au namespace PID de l'hôte
     volumes:
       - ./data:/data                              # Persistance SQLite
       - /opt/container/cronmaster/scripts:/scripts:ro  # Scripts montés en lecture seule
-      - /var/run/docker.sock:/var/run/docker.sock # Accès Docker (optionnel)
+      - /var/run/docker.sock:/var/run/docker.sock # Accès Docker
     environment:
       - DB_PATH=/data/cronhub.db
       - TZ=Europe/Paris
@@ -151,6 +172,8 @@ networks:
   proxy:
     external: true
 ```
+
+> **Important** : `privileged: true` et `pid: host` sont nécessaires pour que `nsenter` puisse accéder aux namespaces de l'hôte.
 
 ### Démarrage
 
@@ -177,8 +200,9 @@ docker compose up -d --build
   "id": "uuid",
   "name": "Mon job",
   "schedule": "0 8 * * *",
-  "command": "/scripts/mon-script.sh",
+  "command": "python3 /opt/mon-script.py",
   "description": "Description optionnelle",
+  "category": "potager",
   "enabled": true,
   "last_run": "2026-03-15T08:00:00",
   "last_status": "success",
@@ -205,8 +229,9 @@ docker compose up -d --build
 
 ## 🔧 Notes de déploiement
 
+- Les commandes sont exécutées via `nsenter --target 1 --mount --uts --ipc --net --pid` — accès complet à l'environnement hôte (python3, npm, openclaw, etc.)
+- `privileged: true` et `pid: host` sont requis dans le `docker-compose.yml`
 - Les scripts dans `/scripts` sont montés depuis `/opt/container/cronmaster/scripts` (lecture seule)
-- La commande doit être exécutable **depuis l'intérieur du container**
 - Le scheduler APScheduler démarre automatiquement au lancement et recharge tous les jobs actifs
 - Les jobs sont exécutés en `shell=True` avec un timeout de 3600 secondes
 - Stdout/stderr sont limités à 10 000 caractères par exécution
@@ -216,3 +241,4 @@ docker compose up -d --build
 ## 📄 Licence
 
 Projet privé — perco / NAS domestique
+
