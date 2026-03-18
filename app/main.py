@@ -42,6 +42,7 @@ def init_db():
             schedule    TEXT NOT NULL,
             command     TEXT NOT NULL,
             description TEXT DEFAULT '',
+            category    TEXT DEFAULT '',
             enabled     INTEGER DEFAULT 1,
             last_run    TEXT,
             last_status TEXT DEFAULT 'never',
@@ -59,7 +60,16 @@ def init_db():
         );
     """)
     conn.commit()
-    conn.close()
+    
+    # Migration: ajouter la colonne category si elle n'existe pas
+    try:
+        conn = get_db()
+        conn.execute("ALTER TABLE jobs ADD COLUMN category TEXT DEFAULT ''")
+        conn.commit()
+        conn.close()
+    except sqlite3.OperationalError:
+        # La colonne existe déjà
+        pass
 
 
 def row_to_dict(row) -> dict:
@@ -220,6 +230,7 @@ class JobCreate(BaseModel):
     schedule: str
     command: str
     description: Optional[str] = ""
+    category: Optional[str] = ""
     enabled: Optional[bool] = True
 
 
@@ -228,6 +239,7 @@ class JobUpdate(BaseModel):
     schedule: Optional[str] = None
     command: Optional[str] = None
     description: Optional[str] = None
+    category: Optional[str] = None
     enabled: Optional[bool] = None
 
 
@@ -255,9 +267,9 @@ def api_create_job(payload: JobCreate):
     now = datetime.now().isoformat()
     conn = get_db()
     conn.execute(
-        "INSERT INTO jobs (id,name,schedule,command,description,enabled,created_at) VALUES (?,?,?,?,?,?,?)",
+        "INSERT INTO jobs (id,name,schedule,command,description,category,enabled,created_at) VALUES (?,?,?,?,?,?,?,?)",
         (job_id, payload.name, payload.schedule, payload.command,
-         payload.description or "", int(payload.enabled), now)
+         payload.description or "", payload.category or "", int(payload.enabled), now)
     )
     conn.commit()
     conn.close()
@@ -295,6 +307,8 @@ def api_update_job(job_id: str, payload: JobUpdate):
         updates["command"] = payload.command
     if payload.description is not None:
         updates["description"] = payload.description
+    if payload.category is not None:
+        updates["category"] = payload.category
     if payload.enabled is not None:
         updates["enabled"] = int(payload.enabled)
 
@@ -398,6 +412,7 @@ def ui_create_job(
     schedule: str = Form(...),
     command: str = Form(...),
     description: str = Form(""),
+    category: str = Form(""),
     enabled: str = Form("on"),
 ):
     try:
@@ -418,8 +433,8 @@ def ui_create_job(
     is_enabled = 1 if enabled == "on" else 0
     conn = get_db()
     conn.execute(
-        "INSERT INTO jobs (id,name,schedule,command,description,enabled,created_at) VALUES (?,?,?,?,?,?,?)",
-        (job_id, name, schedule, command, description, is_enabled, now)
+        "INSERT INTO jobs (id,name,schedule,command,description,category,enabled,created_at) VALUES (?,?,?,?,?,?,?,?)",
+        (job_id, name, schedule, command, description, category, is_enabled, now)
     )
     conn.commit()
     conn.close()
@@ -465,6 +480,7 @@ def ui_update_job(
     schedule: str = Form(...),
     command: str = Form(...),
     description: str = Form(""),
+    category: str = Form(""),
     enabled: str = Form("off"),
 ):
     job = get_job(job_id)
@@ -485,8 +501,8 @@ def ui_update_job(
     is_enabled = 1 if enabled == "on" else 0
     conn = get_db()
     conn.execute(
-        "UPDATE jobs SET name=?,schedule=?,command=?,description=?,enabled=? WHERE id=?",
-        (name, schedule, command, description, is_enabled, job_id)
+        "UPDATE jobs SET name=?,schedule=?,command=?,description=?,category=?,enabled=? WHERE id=?",
+        (name, schedule, command, description, category, is_enabled, job_id)
     )
     conn.commit()
     conn.close()
