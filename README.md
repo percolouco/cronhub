@@ -43,12 +43,22 @@ CronHub permet de créer, gérer et monitorer des tâches planifiées (cron jobs
 
 ---
 
-## 📊 Jobs configurés (35 au total)
+## 📊 Jobs configurés
 
 | Catégorie | Nombre | Exemples |
 |-----------|--------|---------|
 | Système / MH / Plex / Location | 11 | Backups, monitoring, rapports Plex |
 | Potager / Maison | 24 | Arrosage, alertes, automatisations maison |
+| Sync | 1 | Synchronisation Gitea → GitHub |
+
+### 🔄 Job de synchronisation Gitea → GitHub
+
+Un job automatique synchronise tous les dépôts de Gitea (`http://192.168.1.29:3500/perco`) vers GitHub (`percolouco`) :
+
+- **Fréquence** : Toutes les heures (`0 * * * *`)
+- **Mode** : Mirror (toutes les branches et tags)
+- **Scripts** : Voir `scripts/README_SYNC.md` pour la configuration complète
+- **Tokens requis** : `GITHUB_TOKEN` et `GITEA_TOKEN` (configurés comme secrets)
 
 ---
 
@@ -119,12 +129,16 @@ curl https://cronhub.nas.percolouco.com/api/jobs/{id}/logs?limit=20
 cronhub/
 ├── app/
 │   ├── __init__.py
-│   └── main.py          # Application FastAPI (routes, scheduler, DB)
+│   └── main.py                    # Application FastAPI (routes, scheduler, DB)
+├── scripts/
+│   ├── sync_gitea_to_github.py    # Script de synchronisation Gitea → GitHub
+│   ├── init_sync_job.py           # Initialisation du job de sync dans CronHub
+│   └── README_SYNC.md             # Documentation du système de sync
 ├── templates/
-│   ├── index.html       # Dashboard (avec filtre par catégorie)
-│   ├── job_detail.html  # Détail d'un job + logs
-│   └── job_form.html    # Formulaire création/édition (champ category)
-├── data/                # Volume persistant (SQLite)
+│   ├── index.html                 # Dashboard (avec filtre par catégorie)
+│   ├── job_detail.html            # Détail d'un job + logs
+│   └── job_form.html              # Formulaire création/édition (champ category)
+├── data/                          # Volume persistant (SQLite)
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
