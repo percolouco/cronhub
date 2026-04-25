@@ -15,7 +15,9 @@
 
 <!-- Stats -->
 <div class="grid grid-cols-4 gap-4 mb-8">
-    <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+    <a href="{{ '/' if active_filter == 'total' else '/?filter=total' }}"
+       class="bg-white rounded-xl p-5 shadow-sm border transition hover:shadow-md
+              {{ 'border-blue-400 ring-2 ring-blue-200' if active_filter == 'total' else 'border-slate-100 hover:border-blue-200' }}">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                 <i class="fas fa-list text-blue-600"></i>
@@ -25,8 +27,10 @@
                 <p class="text-xs text-slate-500">Total</p>
             </div>
         </div>
-    </div>
-    <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+    </a>
+    <a href="{{ '/' if active_filter == 'active' else '/?filter=active' }}"
+       class="bg-white rounded-xl p-5 shadow-sm border transition hover:shadow-md
+              {{ 'border-green-400 ring-2 ring-green-200' if active_filter == 'active' else 'border-slate-100 hover:border-green-200' }}">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                 <i class="fas fa-circle-check text-green-600"></i>
@@ -36,8 +40,10 @@
                 <p class="text-xs text-slate-500">Actifs</p>
             </div>
         </div>
-    </div>
-    <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+    </a>
+    <a href="{{ '/' if active_filter == 'success' else '/?filter=success' }}"
+       class="bg-white rounded-xl p-5 shadow-sm border transition hover:shadow-md
+              {{ 'border-emerald-400 ring-2 ring-emerald-200' if active_filter == 'success' else 'border-slate-100 hover:border-emerald-200' }}">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
                 <i class="fas fa-check text-emerald-600"></i>
@@ -47,8 +53,10 @@
                 <p class="text-xs text-slate-500">Succès</p>
             </div>
         </div>
-    </div>
-    <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+    </a>
+    <a href="{{ '/' if active_filter == 'failed' else '/?filter=failed' }}"
+       class="bg-white rounded-xl p-5 shadow-sm border transition hover:shadow-md
+              {{ 'border-red-400 ring-2 ring-red-200' if active_filter == 'failed' else 'border-slate-100 hover:border-red-200' }}">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
                 <i class="fas fa-triangle-exclamation text-red-600"></i>
@@ -58,13 +66,28 @@
                 <p class="text-xs text-slate-500">Échecs</p>
             </div>
         </div>
-    </div>
+    </a>
 </div>
 
 <!-- Jobs table -->
 <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
     <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-        <h3 class="font-semibold text-slate-700">Jobs planifiés</h3>
+        <div class="flex items-center gap-3">
+            <h3 class="font-semibold text-slate-700">Jobs planifiés</h3>
+            {% if active_filter %}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
+                {% if active_filter == 'failed' %}bg-red-100 text-red-700
+                {% elif active_filter == 'success' %}bg-emerald-100 text-emerald-700
+                {% elif active_filter == 'active' %}bg-green-100 text-green-700
+                {% else %}bg-blue-100 text-blue-700{% endif %}">
+                <i class="fas fa-filter text-xs"></i>
+                {{ {'total': 'Tous', 'active': 'Actifs', 'success': 'Succès', 'failed': 'Échecs'}[active_filter] }}
+            </span>
+            <a href="/" class="text-xs text-slate-400 hover:text-slate-600 transition" title="Effacer le filtre">
+                <i class="fas fa-xmark"></i> Effacer
+            </a>
+            {% endif %}
+        </div>
         <span class="text-xs text-slate-400">Rafraîchissement auto toutes les 30s</span>
     </div>
 
