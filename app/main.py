@@ -380,16 +380,30 @@ def api_get_logs(job_id: str, limit: int = 50):
 # UI Routes
 # ──────────────────────────────────────────────
 @app.get("/", response_class=HTMLResponse)
-def ui_index(request: Request):
+def ui_index(request: Request, filter: Optional[str] = None):
     jobs = get_all_jobs()
     total = len(jobs)
     active = sum(1 for j in jobs if j["enabled"])
     failed = sum(1 for j in jobs if j["last_status"] == "failed")
     success = sum(1 for j in jobs if j["last_status"] == "success")
+
+    VALID_FILTERS = {"total", "active", "success", "failed"}
+    active_filter = filter if filter in VALID_FILTERS else None
+
+    if active_filter == "active":
+        filtered_jobs = [j for j in jobs if j["enabled"]]
+    elif active_filter == "success":
+        filtered_jobs = [j for j in jobs if j["last_status"] == "success"]
+    elif active_filter == "failed":
+        filtered_jobs = [j for j in jobs if j["last_status"] == "failed"]
+    else:
+        filtered_jobs = jobs
+
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "jobs": jobs,
+        "jobs": filtered_jobs,
         "page": "dashboard",
+        "active_filter": active_filter,
         "stats": {"total": total, "active": active, "failed": failed, "success": success},
     })
 
